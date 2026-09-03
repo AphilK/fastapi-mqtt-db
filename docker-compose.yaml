@@ -1,0 +1,44 @@
+services:
+
+  db:
+    image: mysql
+    restart: always
+    ports:
+      - "3306:3306"
+    environment:
+      MYSQL_ROOT_PASSWORD: ${ROOT_PASSWORD}
+      MYSQL_USER: ${USER_DATABASE}
+      MYSQL_PASSWORD: ${PASSWORD_DATABASE}
+    healthcheck:
+      test: mysql --user=root --password=${ROOT_PASSWORD} --execute="SHOW DATABASES;"
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  mosquitto:
+    image: eclipse-mosquitto:latest
+    container_name: mosquitto
+    restart: unless-stopped
+    ports:
+      - "1883:1883"
+      - "8883:8883"
+      - "9001:9001"
+    volumes:
+      - ./mosquitto/config:/mosquitto/config
+      - ./mosquitto/data:/mosquitto/data
+      - ./mosquitto/log:/mosquitto/log
+
+  python_app:
+    build: .
+    container_name: fastapi
+    env_file: ".env"
+    develop:
+      watch:
+        - action: rebuild
+          path: .
+    restart: no
+    depends_on:
+      db:
+        condition: service_healthy
+    volumes:
+      - .:/app

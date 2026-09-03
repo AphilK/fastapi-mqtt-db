@@ -1,50 +1,59 @@
-import mysql.connector
-import os
-
-HOST = os.getenv("HOST_DATABASE", "localhost")
-USER = os.getenv("USER_DATABASE", "")
-PASSWORD = os.getenv("PASSWORD_DATABASE", "")
-DATABASE = os.getenv("DATABASE_NAME", "")
-
 # Check if the database exists 
 def check_if_database_exists(cursor, db_name):
     database_found = False
-    cursor.execute("SHOW DATABASES")
 
-    # Check the database by name
-    for x in cursor:
-        if x == db_name:
-            database_found = True
+    try:
+        cursor.execute("SHOW DATABASES")
+    except Exception as e:
+        return f"Error while checking if the database exists ({e})"
+    else:
+        # Check the database by name
+        for x in cursor:
+            if x == db_name:
+                database_found = True
 
-    return database_found
+        return database_found
 
 def create_database(cursor, db_name):
     # Firstly it must ensure it does not exists before it creates
     database_found = check_if_database_exists(cursor= cursor, db_name= db_name)
 
-    cursor.execute(f"CREATE DATABASE {db_name}") if database_found == False else "Database already exists"
+    if type(database_found) == bool:            
+        try:
+            cursor.execute(f"CREATE DATABASE {db_name}") if database_found == False else "Database already exists"
+        except Exception as e:
+            return f"Error while creating the database ({e})"
+        else:
+            return f"Database {db_name} created succesfully!"
+    else:
+        print(database_found)
 
 def check_if_table_exists(cursor, table_name):
     table_exists = False
-    cursor.execute("SHOW TABLES")
 
-    # Check the table by name
-    for x in cursor:
-        if x == table_name:
-            table_exists = True
+    try:
+        cursor.execute("SHOW TABLES")
+    except Exception as e:
+        return f"Error while checking tables: {e}"
+    else:
+        # Check the table by name
+        for x in cursor:
+            if x == table_name:
+                table_exists = True
 
-    return table_exists
+        return table_exists
 
-#TO-DO: Finish implementation
-def create_table(cursor):
-    table_name = input("Insert the table name: ")
+def create_table(cursor, table_name, variables):
+    table_exists = check_if_table_exists(cursor, table_name)
+    command_string = f"CREATE TABLE {table_name} ({variables})"
 
-try:
-    mydb = mysql.connector.connect(
-        host = HOST,
-        user = USER,
-        password = PASSWORD,
-        database = DATABASE
-    ) 
-except:
-    print("Invalid connector or database does not exist!")
+    if type(table_exists) == bool:
+        try:
+            cursor.execute(command_string)
+        except Exception as e:
+            return f"Table {table_name} not created, error: {e}"
+        else:
+            return f"Table {table_name} created succesfully!"
+    else:
+        print(table_exists)
+    
