@@ -1,7 +1,6 @@
 import mysql.connector
+from sensors import run_simulation
 import os
-from mqtt import client
-import db
 
 HOST_DATABASE = os.getenv("HOST_DATABASE", "db")
 USER = os.getenv("USER_DATABASE")
@@ -23,12 +22,7 @@ def main():
         cursor = mydb.cursor()
         print("CONEXÃO FEITA")
 
-    try: 
-        client.connect(HOST_MOSQUITTO, PORT_MOSQUITTO, 60)
-        client.loop_forever()
-    except Exception as e:
-        print(f"Error with mqtt: {e}")
-    
+    run_simulation() 
 
 
 if __name__ == "__main__":
