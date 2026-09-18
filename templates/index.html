@@ -1,0 +1,215 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Factory Pulse</title>
+  <style>
+    :root {
+      --ink: #e9eee8;
+      --muted: #8b978e;
+      --line: #28322c;
+      --panel: #141b17;
+      --panel-strong: #1b241e;
+      --canvas: #0d1210;
+      --acid: #c7f36b;
+      --acid-dim: #799b38;
+      --amber: #f2b561;
+      --red: #ef786d;
+      --blue: #8bd0db;
+      --radius: 14px;
+    }
+
+    * { box-sizing: border-box; }
+    html { background: var(--canvas); }
+    body {
+      margin: 0;
+      color: var(--ink);
+      background:
+        radial-gradient(circle at 84% -10%, rgba(199, 243, 107, .09), transparent 30rem),
+        linear-gradient(135deg, rgba(255,255,255,.018) 25%, transparent 25%) 0 0 / 7px 7px,
+        var(--canvas);
+      font-family: "IBM Plex Sans", "Avenir Next", "Segoe UI", sans-serif;
+      letter-spacing: .01em;
+      min-height: 100vh;
+    }
+
+    .shell { max-width: 1440px; margin: 0 auto; padding: 28px 34px 44px; }
+    .topbar { display: flex; justify-content: space-between; align-items: center; margin-bottom: 52px; }
+    .brand { display: flex; align-items: center; gap: 12px; font-size: 14px; font-weight: 700; letter-spacing: .16em; text-transform: uppercase; }
+    .brand-mark { width: 28px; height: 28px; border: 1px solid var(--acid); display: grid; place-items: center; transform: rotate(45deg); }
+    .brand-mark span { width: 8px; height: 8px; background: var(--acid); display: block; transform: rotate(-45deg); }
+    .connection { color: var(--muted); font-size: 12px; display: flex; align-items: center; gap: 9px; }
+    .connection-dot { width: 7px; height: 7px; border-radius: 50%; background: var(--amber); box-shadow: 0 0 0 4px rgba(242,181,97,.12); }
+    .connection.is-live .connection-dot { background: var(--acid); box-shadow: 0 0 0 4px rgba(199,243,107,.12); animation: breathe 2.4s ease-in-out infinite; }
+    .connection.is-offline .connection-dot { background: var(--red); box-shadow: 0 0 0 4px rgba(239,120,109,.12); }
+
+    .intro { display: grid; grid-template-columns: minmax(0, 1fr) 310px; gap: 56px; align-items: end; margin-bottom: 42px; }
+    .eyebrow { color: var(--acid); font-family: "IBM Plex Mono", "SFMono-Regular", monospace; font-size: 11px; letter-spacing: .18em; text-transform: uppercase; margin-bottom: 16px; }
+    h1 { font-size: clamp(42px, 6vw, 78px); line-height: .94; letter-spacing: -.065em; font-weight: 650; margin: 0; max-width: 680px; }
+    .intro-copy { color: var(--muted); line-height: 1.6; margin: 20px 0 0; max-width: 520px; font-size: 15px; }
+    .time-panel { border-left: 1px solid var(--line); padding: 12px 0 12px 24px; }
+    .time-label { color: var(--muted); font: 11px "IBM Plex Mono", monospace; letter-spacing: .14em; text-transform: uppercase; }
+    .time-value { color: var(--ink); font: 22px "IBM Plex Mono", monospace; margin-top: 12px; }
+    .time-note { color: var(--muted); font-size: 12px; margin-top: 7px; }
+
+    .summary { display: grid; grid-template-columns: 1.15fr .85fr .85fr; border-top: 1px solid var(--line); border-bottom: 1px solid var(--line); margin-bottom: 42px; }
+    .metric { min-height: 130px; padding: 22px 26px 20px 0; border-right: 1px solid var(--line); margin-right: 26px; }
+    .metric:last-child { border: 0; margin: 0; }
+    .metric-label { color: var(--muted); font: 11px "IBM Plex Mono", monospace; letter-spacing: .14em; text-transform: uppercase; }
+    .metric-value { margin-top: 16px; font-size: 42px; line-height: 1; letter-spacing: -.05em; font-weight: 600; }
+    .metric-value small { color: var(--muted); font-size: 13px; letter-spacing: 0; font-weight: 400; margin-left: 5px; }
+    .metric-detail { color: var(--muted); font-size: 12px; margin-top: 10px; }
+    .metric-value.acid { color: var(--acid); }
+
+    .section-head { display: flex; justify-content: space-between; align-items: baseline; margin-bottom: 17px; }
+    .section-title { font-size: 15px; font-weight: 600; letter-spacing: .02em; }
+    .section-meta { color: var(--muted); font: 11px "IBM Plex Mono", monospace; text-transform: uppercase; letter-spacing: .11em; }
+    .stations { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 12px; }
+    .station { background: var(--panel); border: 1px solid var(--line); border-radius: var(--radius); min-height: 230px; padding: 18px; position: relative; overflow: hidden; transition: border-color .3s ease, background .3s ease, transform .3s ease; }
+    .station.updated { animation: signal .7s ease-out; }
+    .station.working { border-color: rgba(199,243,107,.5); background: linear-gradient(145deg, rgba(199,243,107,.1), var(--panel) 45%); }
+    .station.unknown { opacity: .6; }
+    .station-id { display: flex; justify-content: space-between; align-items: center; color: var(--muted); font: 11px "IBM Plex Mono", monospace; text-transform: uppercase; letter-spacing: .12em; }
+    .station-index { color: var(--ink); font-size: 13px; font-weight: 700; }
+    .status-line { display: flex; align-items: center; gap: 8px; margin-top: 31px; font-size: 13px; }
+    .status-dot { width: 8px; height: 8px; border-radius: 50%; background: var(--muted); }
+    .working .status-dot { background: var(--acid); box-shadow: 0 0 13px var(--acid); animation: breathe 1.6s ease-in-out infinite; }
+    .idle .status-dot { background: var(--blue); }
+    .status-text { text-transform: capitalize; }
+    .station-reading { display: flex; justify-content: space-between; align-items: end; margin-top: 42px; }
+    .reading-value { font: 24px "IBM Plex Mono", monospace; letter-spacing: -.07em; }
+    .reading-label { color: var(--muted); font: 10px "IBM Plex Mono", monospace; text-transform: uppercase; letter-spacing: .08em; margin-top: 5px; }
+    .station-trace { height: 2px; background: var(--line); position: absolute; left: 18px; right: 18px; bottom: 17px; }
+    .station-trace span { display: block; height: 100%; width: 48%; background: var(--acid); transition: width .6s ease; }
+    .idle .station-trace span { background: var(--blue); width: 13%; }
+    .unknown .station-trace span { width: 4%; background: var(--muted); }
+
+    .lower-grid { display: grid; grid-template-columns: 1.15fr .85fr; gap: 12px; margin-top: 42px; }
+    .panel { background: var(--panel); border: 1px solid var(--line); border-radius: var(--radius); padding: 22px; min-height: 235px; }
+    .flow-chart { height: 138px; display: flex; align-items: end; gap: 5px; padding-top: 22px; }
+    .bar { flex: 1; min-width: 4px; height: 8%; background: var(--acid-dim); transition: height .7s cubic-bezier(.2,.8,.2,1), background .3s ease; }
+    .bar:last-child { background: var(--acid); }
+    .signal-list { display: flex; flex-direction: column; margin-top: 4px; }
+    .signal { display: flex; justify-content: space-between; align-items: center; padding: 11px 0; border-bottom: 1px solid var(--line); font-size: 12px; }
+    .signal:last-child { border-bottom: 0; }
+    .signal-label { color: var(--muted); }
+    .signal-value { font-family: "IBM Plex Mono", monospace; color: var(--ink); }
+    .empty { color: var(--muted); font-size: 13px; padding: 35px 0; }
+    .footer { color: var(--muted); display: flex; justify-content: space-between; margin-top: 28px; font: 10px "IBM Plex Mono", monospace; letter-spacing: .1em; text-transform: uppercase; }
+
+    @keyframes breathe { 50% { opacity: .45; } }
+    @keyframes signal { 0% { transform: translateY(3px); } 100% { transform: translateY(0); } }
+    @media (max-width: 900px) { .shell { padding: 22px 20px 34px; } .intro { grid-template-columns: 1fr; gap: 25px; } .time-panel { border-left: 0; border-top: 1px solid var(--line); padding: 20px 0 0; } .stations { grid-template-columns: repeat(2, 1fr); } .lower-grid { grid-template-columns: 1fr; } }
+    @media (max-width: 560px) { .topbar { margin-bottom: 38px; } .summary { grid-template-columns: 1fr 1fr; } .metric { min-height: 105px; margin-right: 16px; padding-right: 16px; } .metric:last-child { grid-column: span 2; border-top: 1px solid var(--line); margin-top: 0; padding-top: 18px; } .metric-value { font-size: 31px; margin-top: 13px; } .stations { gap: 8px; } .station { min-height: 205px; padding: 15px; } .station-reading { margin-top: 31px; } .footer { gap: 20px; flex-direction: column; } }
+    @media (prefers-reduced-motion: reduce) { *, *::before, *::after { animation-duration: .01ms !important; transition-duration: .01ms !important; } }
+  </style>
+</head>
+<body>
+  <main class="shell">
+    <header class="topbar">
+      <div class="brand"><span class="brand-mark" aria-hidden="true"><span></span></span> Factory Pulse</div>
+      <div id="connection" class="connection"><span class="connection-dot"></span><span id="connection-text">Connecting to line</span></div>
+    </header>
+
+    <section class="intro">
+      <div>
+        <div class="eyebrow">Live production floor / line 01</div>
+        <h1>The line, right now.</h1>
+        <p class="intro-copy">A live read of station activity, output and energy across the factory floor.</p>
+      </div>
+      <div class="time-panel">
+        <div class="time-label">Local observation time</div>
+        <div class="time-value" id="clock">--:--:--</div>
+        <div class="time-note" id="last-seen">Waiting for the first signal</div>
+      </div>
+    </section>
+
+    <section class="summary" aria-label="Production summary">
+      <div class="metric"><div class="metric-label">Stations working</div><div class="metric-value acid" id="working-count">--<small>/ 5</small></div><div class="metric-detail" id="working-detail">Listening for station state</div></div>
+      <div class="metric"><div class="metric-label">Latest item</div><div class="metric-value" id="latest-item">--</div><div class="metric-detail">Last item released into the line</div></div>
+      <div class="metric"><div class="metric-label">Line draw</div><div class="metric-value" id="line-power">--<small>kWh</small></div><div class="metric-detail">Reported station consumption</div></div>
+    </section>
+
+    <section aria-labelledby="stations-heading">
+      <div class="section-head"><div class="section-title" id="stations-heading">Station map</div><div class="section-meta" id="station-meta">No signal yet</div></div>
+      <div class="stations" id="stations"></div>
+    </section>
+
+    <section class="lower-grid">
+      <div class="panel"><div class="section-head"><div class="section-title">Production rhythm</div><div class="section-meta">Recent events</div></div><div class="flow-chart" id="flow-chart"></div></div>
+      <div class="panel"><div class="section-head"><div class="section-title">Signal rail</div><div class="section-meta">Last 5</div></div><div class="signal-list" id="signal-list"><div class="empty">No messages have reached the dashboard yet.</div></div></div>
+    </section>
+    <footer class="footer"><span>MQTT / factory/stations + factory/items</span><span>Telemetry surface 01</span></footer>
+  </main>
+
+  <script>
+    const stationIds = ["s1", "s2", "s3", "s4", "s5"];
+    let previousStations = {};
+    const $ = (id) => document.getElementById(id);
+    const escapeHtml = (value) => String(value).replace(/[&<>'"]/g, (char) => ({"&":"&amp;","<":"&lt;",">":"&gt;","'":"&#39;",'"':"&quot;"}[char]));
+    const time = (value) => value ? new Date(value).toLocaleTimeString([], {hour: "2-digit", minute: "2-digit", second: "2-digit"}) : "--:--:--";
+    const relative = (value) => { if (!value) return "Waiting for the first signal"; const seconds = Math.max(0, Math.round((Date.now() - new Date(value)) / 1000)); return seconds < 5 ? "Just now" : `${seconds}s ago`; };
+
+    function renderStations(stations) {
+      const byId = Object.fromEntries(stations.map((station) => [station.asset_id, station]));
+      $("stations").innerHTML = stationIds.map((id, index) => {
+        const station = byId[id] || {asset_id: id, status: "unknown", power_consumption: 0, cycle_time: null};
+        const status = station.status || "unknown";
+        const changed = previousStations[id] && JSON.stringify(previousStations[id]) !== JSON.stringify(station);
+        const reading = status === "working" ? `${Number(station.cycle_time || 0).toFixed(1)}s` : status === "idle" ? "Ready" : "No data";
+        return `<article class="station ${escapeHtml(status)} ${changed ? "updated" : ""}">
+          <div class="station-id"><span class="station-index">Station ${index + 1}</span><span>${escapeHtml(id)}</span></div>
+          <div class="status-line"><span class="status-dot"></span><span class="status-text">${escapeHtml(status)}</span></div>
+          <div class="station-reading"><div><div class="reading-value">${reading}</div><div class="reading-label">${status === "working" ? "cycle time" : "state"}</div></div><div><div class="reading-value">${Number(station.power_consumption || 0).toFixed(2)}</div><div class="reading-label">power</div></div></div>
+          <div class="station-trace"><span></span></div>
+        </article>`;
+      }).join("");
+      previousStations = byId;
+    }
+
+    function renderSignals(history) {
+      const events = history.slice(-5).reverse();
+      $("signal-list").innerHTML = events.length ? events.map((event) => {
+        const label = event.type === "item" ? `Item #${event.count} entered the line` : `${event.station} is ${event.status}`;
+        return `<div class="signal"><span class="signal-label">${escapeHtml(label)}</span><span class="signal-value">${time(event.at)}</span></div>`;
+      }).join("") : '<div class="empty">No messages have reached the dashboard yet.</div>';
+      const heights = history.slice(-24);
+      $("flow-chart").innerHTML = Array.from({length: 24}, (_, index) => {
+        const event = heights[index - (24 - heights.length)];
+        const level = event ? (event.type === "item" ? 100 : event.status === "working" ? 58 : 23) : 7;
+        return `<span class="bar" style="height:${level}%" title="${event ? escapeHtml(event.type) : "No signal"}"></span>`;
+      }).join("");
+    }
+
+    function render(data) {
+      const stations = data.stations || [];
+      const working = stations.filter((station) => station.status === "working").length;
+      const power = stations.reduce((sum, station) => sum + Number(station.power_consumption || 0), 0);
+      $("working-count").innerHTML = `${working}<small>/ 5</small>`;
+      $("working-detail").textContent = working ? `${working === 1 ? "One station" : `${working} stations`} actively cycling` : "Line is waiting for work";
+      $("latest-item").textContent = data.latest_item ?? "--";
+      $("line-power").innerHTML = `${power.toFixed(2)}<small>kWh</small>`;
+      $("clock").textContent = time(new Date());
+      $("last-seen").textContent = data.last_message ? `Last signal ${relative(data.last_message)}` : "Waiting for the first signal";
+      $("station-meta").textContent = `${working} of 5 active / ${stations.filter((s) => s.status === "idle").length} ready`;
+      renderStations(stations);
+      renderSignals(data.history || []);
+    }
+
+    function setConnection(connected) {
+      $("connection").className = `connection ${connected ? "is-live" : "is-offline"}`;
+      $("connection-text").textContent = connected ? "Live from MQTT" : "Broker offline";
+    }
+
+    fetch("/api/state").then((response) => response.json()).then((data) => { render(data); setConnection(data.mqtt_connected); }).catch(() => setConnection(false));
+    const source = new EventSource("/events");
+    source.onmessage = (event) => { const message = JSON.parse(event.data); if (message.data) { render(message.data); setConnection(message.data.mqtt_connected); } if (message.type === "connection") setConnection(message.connected); };
+    source.onerror = () => setConnection(false);
+    setInterval(() => { $("clock").textContent = time(new Date()); if (window.__lastData) $("last-seen").textContent = window.__lastData.last_message ? `Last signal ${relative(window.__lastData.last_message)}` : "Waiting for the first signal"; }, 1000);
+    const originalRender = render;
+    render = (data) => { window.__lastData = data; originalRender(data); };
+    setConnection(false);
+  </script>
+</body>
+</html>
