@@ -34,6 +34,8 @@ services:
       context: .
       dockerfile: FastapiDockerfile
     container_name: fastapi
+    ports:
+      - "8000:80"
     env_file: ".env"
     develop:
       watch:
