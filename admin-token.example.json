@@ -1,0 +1,5 @@
+{
+  "token": "replace-with-a-local-influx-admin-token",
+  "name": "admin",
+  "description": "Local development token"
+}
