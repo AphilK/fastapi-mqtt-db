@@ -1,6 +1,8 @@
 .env
 .vscode
 .venv
+.influxdb3
+admin-token.json
 __pycache__
 mosquitto/data/*
 mosquitto/log/*

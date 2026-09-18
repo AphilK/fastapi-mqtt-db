@@ -1,20 +1,5 @@
 services:
 
-  db:
-    image: mysql
-    restart: always
-    ports:
-      - "3306:3306"
-    environment:
-      MYSQL_ROOT_PASSWORD: ${ROOT_PASSWORD}
-      MYSQL_USER: ${USER_DATABASE}
-      MYSQL_PASSWORD: ${PASSWORD_DATABASE}
-    healthcheck:
-      test: mysql --user=root --password=${ROOT_PASSWORD} --execute="SHOW DATABASES;"
-      interval: 5s
-      timeout: 5s
-      retries: 10
-
   mosquitto:
     image: eclipse-mosquitto:latest
     container_name: mosquitto
@@ -28,8 +13,26 @@ services:
       - ./mosquitto/data:/mosquitto/data
       - ./mosquitto/log:/mosquitto/log
 
-  python_app:
-    build: .
+  sensors:
+    build:
+      context: .
+      dockerfile: SensorsDockerfile
+    container_name: sensors
+    env_file: ".env"
+    develop:
+      watch:
+        - action: rebuild
+          path: .
+    restart: no
+    depends_on:
+      - influxdb3-core
+    volumes:
+      - .:/sensors
+
+  fastapi:
+    build: 
+      context: .
+      dockerfile: FastapiDockerfile
     container_name: fastapi
     env_file: ".env"
     develop:
@@ -38,7 +41,45 @@ services:
           path: .
     restart: no
     depends_on:
-      db:
-        condition: service_healthy
+      - influxdb3-core
     volumes:
       - .:/app
+
+  influxdb3-core:
+    container_name: influxdb3-core
+    image: influxdb:3-core
+    ports:
+      - 8181:8181
+    command:
+      - influxdb3
+      - serve
+      - --node-id=node0
+      - --object-store=file
+      - --data-dir=/var/lib/influxdb3/data
+      - --plugin-dir=/var/lib/influxdb3/plugins
+      - --admin-token-file=/run/secrets/admin-token
+    secrets:
+      - admin-token
+    volumes:
+      - type: bind
+        source: ./.influxdb3/data
+        target: /var/lib/influxdb3/data
+      - type: bind
+        source: ./.influxdb3/plugins
+        target: /var/lib/influxdb3/plugins
+
+  telegraf:
+    image: telegraf:latest
+    container_name: telegraf
+    restart: unless-stopped
+    environment:
+      INFLUXDB_TOKEN: ${INFLUXDB_TOKEN}
+    depends_on:
+      - influxdb3-core
+      - mosquitto
+    volumes:
+      - ./telegraf.conf:/etc/telegraf/telegraf.conf:ro
+
+secrets:
+  admin-token:
+    file: admin-token.json
