@@ -196,3 +196,5 @@ def run_simulation():
         client.loop_stop()
         client.disconnect()
         print("Factory closed.")
+
+run_simulation()
